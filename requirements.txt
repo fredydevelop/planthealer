@@ -11,3 +11,4 @@ email-validator==2.3.0
 pydantic==2.12.5
 tensorflow==2.16.2
 h5py==3.16.0
+python-dotenv
