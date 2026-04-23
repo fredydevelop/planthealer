@@ -78,8 +78,7 @@ async def predict(
 
     contents = await file.read()
     image = Image.open(io.BytesIO(contents)).convert("RGB")
-    image = image.resize((256, 256))
-    image = np.array(image, dtype=np.float32) / 255.0
+    image = np.array(image, dtype=np.float32)
     image = np.expand_dims(image, axis=0)
 
     prediction = model.predict(image)
