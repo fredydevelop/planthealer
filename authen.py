@@ -32,7 +32,7 @@ app.add_middleware(
 
 models = {
     "tomato": load_model("models/tomato/tomato_model.keras"),
-    "bell_pepper": load_model("models/bell_pepper/retry_bellpepper_model.keras"),
+    "bell pepper": load_model("models/bell_pepper/retry_bellpepper_model.keras"),
     "potato": load_model("models/potato/new_potato_model.keras"),
 }
 
@@ -49,7 +49,7 @@ class_labels = {
         "YellowLeaf_Curl_Virus",
         "mosaic_virus",
     ],
-    "bell_pepper": [
+    "bell pepper": [
         "Bacterial_spot",
         "Healthy",
     ],
