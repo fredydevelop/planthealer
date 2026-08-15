@@ -508,7 +508,7 @@ st.markdown(
 # PAGE TITLE
 # =========================================================
 st.title(
-    "Plant Disease Detection System"
+    "🌿 Plant Disease Detection System"
 )
 
 st.write(
@@ -605,11 +605,16 @@ with left_column:
                 uploaded_file
             )
 
-            st.image(
-                image,
-                caption="Uploaded Leaf Image",
-                use_container_width=True,
+            image_left, image_center, image_right = st.columns(
+                [1, 1.2, 1]
             )
+
+            with image_center:
+                st.image(
+                    image,
+                    caption="Uploaded Leaf Image",
+                    width=180,
+                )
 
         except Exception:
 
