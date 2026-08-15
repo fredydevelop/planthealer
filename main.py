@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 from PIL import Image
 import tensorflow as tf
+from pathlib import Path
 
 
 # ============================================================
@@ -15,26 +16,45 @@ st.set_page_config(
 
 
 # ============================================================
+# PROJECT DIRECTORY
+# ============================================================
+BASE_DIR = Path(__file__).resolve().parent
+
+
+# ============================================================
 # MODEL PATHS
-# Replace these paths with the SAME paths you use
-# in your FastAPI model-loading code.
 # ============================================================
 MODEL_PATHS = {
-    "Tomato": "models/tomato_model.keras",
-    "Potato": "models/potato_model.keras",
-    "Bell Pepper": "models/bell_pepper_model.keras"
+    "Tomato": (
+        BASE_DIR
+        / "models"
+        / "tomato"
+        / "tomato_model.keras"
+    ),
+
+    "Bell Pepper": (
+        BASE_DIR
+        / "models"
+        / "bell_pepper"
+        / "retry_bellpepper_model.keras"
+    ),
+
+    "Potato": (
+        BASE_DIR
+        / "models"
+        / "potato"
+        / "new_potato_model.keras"
+    ),
 }
 
 
 # ============================================================
-# CLASS LABELS
-# IMPORTANT:
-# Replace these with the EXACT class order used during training.
+# CLASS NAMES
 #
-# If you do not provide the class labels, prediction can still
-# work, but the result will only show the class index.
+# IMPORTANT:
+# The order of these labels MUST match the class order
+# used during training.
 # ============================================================
-
 CLASS_NAMES = {
 
     "Potato": [
@@ -48,7 +68,6 @@ CLASS_NAMES = {
         "Bell Pepper Healthy"
     ],
 
-    # Replace with your exact Tomato class order
     "Tomato": [
         "Tomato Bacterial Spot",
         "Tomato Early Blight",
@@ -66,12 +85,20 @@ CLASS_NAMES = {
 
 # ============================================================
 # LOAD MODEL
-# Cached so Streamlit does not reload the model every time
-# the user interacts with the page.
 # ============================================================
 @st.cache_resource
 def load_crop_model(model_path):
-    return tf.keras.models.load_model(model_path)
+
+    model_path = Path(model_path)
+
+    if not model_path.exists():
+        raise FileNotFoundError(
+            f"Model not found at: {model_path}"
+        )
+
+    return tf.keras.models.load_model(
+        model_path
+    )
 
 
 # ============================================================
@@ -79,29 +106,40 @@ def load_crop_model(model_path):
 # ============================================================
 def preprocess_image(image):
 
-    # Convert to RGB
+    # Convert image to RGB
     image = image.convert("RGB")
 
-    # IMPORTANT:
-    # Change this if your models were trained using another size.
-    image = image.resize((224, 224))
+    # Resize image
+    # Change this if your models use another input size
+    image = image.resize(
+        (224, 224)
+    )
 
-    # Convert image to numpy array
-    image_array = np.array(image)
+    # Convert to numpy array
+    image_array = np.array(
+        image
+    ).astype("float32")
 
     # Normalize
-    image_array = image_array.astype("float32") / 255.0
+    image_array = image_array / 255.0
 
     # Add batch dimension
-    image_array = np.expand_dims(image_array, axis=0)
+    image_array = np.expand_dims(
+        image_array,
+        axis=0
+    )
 
     return image_array
 
 
 # ============================================================
-# PREDICTION FUNCTION
+# MAKE PREDICTION
 # ============================================================
-def make_prediction(model, image_array, crop):
+def make_prediction(
+    model,
+    image_array,
+    crop
+):
 
     prediction = model.predict(
         image_array,
@@ -109,27 +147,43 @@ def make_prediction(model, image_array, crop):
     )
 
     predicted_class = int(
-        np.argmax(prediction, axis=1)[0]
+        np.argmax(
+            prediction,
+            axis=1
+        )[0]
     )
 
     confidence = float(
-        np.max(prediction)
+        np.max(
+            prediction
+        )
     )
 
-    class_names = CLASS_NAMES.get(crop, [])
+    class_names = CLASS_NAMES.get(
+        crop,
+        []
+    )
 
-    if predicted_class < len(class_names):
-        disease_name = class_names[predicted_class]
+    if predicted_class < len(
+        class_names
+    ):
+        disease_name = class_names[
+            predicted_class
+        ]
     else:
-        disease_name = f"Class {predicted_class}"
+        disease_name = (
+            f"Class {predicted_class}"
+        )
 
-    return predicted_class, disease_name, confidence
+    return (
+        predicted_class,
+        disease_name,
+        confidence
+    )
 
 
 # ============================================================
 # SESSION STATE
-# Used so prediction disappears when the user changes
-# crop or uploaded image.
 # ============================================================
 if "prediction_result" not in st.session_state:
     st.session_state.prediction_result = None
@@ -144,11 +198,13 @@ if "previous_file" not in st.session_state:
 # ============================================================
 # HEADER
 # ============================================================
-st.title("🌿 Plant Disease Detection System")
+st.title(
+    "🌿 Plant Disease Detection System"
+)
 
 st.write(
-    "Upload an image of a crop leaf and use the trained "
-    "deep-learning model to identify its condition."
+    "Select a crop type, upload an image of the crop leaf, "
+    "and use the trained model to predict its condition."
 )
 
 st.divider()
@@ -158,21 +214,23 @@ st.divider()
 # TWO COLUMN LAYOUT
 # ============================================================
 left_column, right_column = st.columns(
-    [1, 1.15],
+    [1, 1],
     gap="large"
 )
 
 
 # ============================================================
 # LEFT COLUMN
-# Prediction controls
+# PREDICTION ACTIONS
 # ============================================================
 with left_column:
 
-    st.subheader("Make a Prediction")
+    st.subheader(
+        "Make a Prediction"
+    )
 
     # --------------------------------------------------------
-    # CROP SELECTION
+    # SELECT CROP
     # --------------------------------------------------------
     selected_crop = st.selectbox(
         "Select Crop Type",
@@ -186,7 +244,7 @@ with left_column:
 
 
     # --------------------------------------------------------
-    # IMAGE UPLOAD
+    # UPLOAD IMAGE
     # --------------------------------------------------------
     uploaded_file = st.file_uploader(
         "Upload Crop Leaf Image",
@@ -199,7 +257,7 @@ with left_column:
 
 
     # --------------------------------------------------------
-    # RESET RESULT WHEN INPUT CHANGES
+    # CURRENT FILE
     # --------------------------------------------------------
     current_file_name = (
         uploaded_file.name
@@ -207,17 +265,27 @@ with left_column:
         else None
     )
 
+
+    # --------------------------------------------------------
+    # RESET RESULT IF INPUT CHANGES
+    # --------------------------------------------------------
     if (
-        selected_crop != st.session_state.previous_crop
+        selected_crop
+        != st.session_state.previous_crop
         or
-        current_file_name != st.session_state.previous_file
+        current_file_name
+        != st.session_state.previous_file
     ):
 
         st.session_state.prediction_result = None
 
-        st.session_state.previous_crop = selected_crop
+        st.session_state.previous_crop = (
+            selected_crop
+        )
 
-        st.session_state.previous_file = current_file_name
+        st.session_state.previous_file = (
+            current_file_name
+        )
 
 
     # --------------------------------------------------------
@@ -230,6 +298,9 @@ with left_column:
     )
 
 
+    # --------------------------------------------------------
+    # HANDLE PREDICTION
+    # --------------------------------------------------------
     if predict_button:
 
         if selected_crop == "Select crop":
@@ -248,40 +319,44 @@ with left_column:
 
             try:
 
+                model_path = MODEL_PATHS[
+                    selected_crop
+                ]
+
                 with st.spinner(
                     f"Analyzing {selected_crop} leaf..."
                 ):
 
                     # ----------------------------------------
-                    # Get correct model
+                    # LOAD SELECTED MODEL
                     # ----------------------------------------
-                    model_path = MODEL_PATHS[
-                        selected_crop
-                    ]
-
                     model = load_crop_model(
                         model_path
                     )
 
 
                     # ----------------------------------------
-                    # Open image
+                    # OPEN IMAGE
                     # ----------------------------------------
+                    uploaded_file.seek(0)
+
                     image = Image.open(
                         uploaded_file
                     )
 
 
                     # ----------------------------------------
-                    # Preprocess
+                    # PREPROCESS IMAGE
                     # ----------------------------------------
                     processed_image = (
-                        preprocess_image(image)
+                        preprocess_image(
+                            image
+                        )
                     )
 
 
                     # ----------------------------------------
-                    # Predict
+                    # MAKE PREDICTION
                     # ----------------------------------------
                     (
                         predicted_class,
@@ -295,7 +370,7 @@ with left_column:
 
 
                     # ----------------------------------------
-                    # Save result
+                    # STORE RESULT
                     # ----------------------------------------
                     st.session_state.prediction_result = {
                         "crop": selected_crop,
@@ -305,13 +380,22 @@ with left_column:
                     }
 
 
-            except FileNotFoundError:
+            except FileNotFoundError as error:
 
                 st.error(
-                    f"The model for {selected_crop} "
-                    f"could not be found.\n\n"
-                    f"Model path: "
-                    f"{MODEL_PATHS[selected_crop]}"
+                    str(error)
+                )
+
+                st.write(
+                    "Streamlit is looking for the model at:"
+                )
+
+                st.code(
+                    str(
+                        MODEL_PATHS[
+                            selected_crop
+                        ]
+                    )
                 )
 
 
@@ -324,11 +408,13 @@ with left_column:
 
 # ============================================================
 # RIGHT COLUMN
-# Image + prediction result
+# IMAGE AND RESULT
 # ============================================================
 with right_column:
 
-    st.subheader("Image & Result")
+    st.subheader(
+        "Image & Result"
+    )
 
 
     # --------------------------------------------------------
@@ -344,11 +430,20 @@ with right_column:
                 uploaded_file
             )
 
-            st.image(
-                preview_image,
-                caption=f"{selected_crop} Leaf Image",
-                use_container_width=True
+
+            # Smaller image and centered
+            image_left, image_center, image_right = st.columns(
+                [1, 2, 1]
             )
+
+            with image_center:
+
+                st.image(
+                    preview_image,
+                    caption=f"{selected_crop} Leaf Image",
+                    width=240
+                )
+
 
         except Exception:
 
@@ -366,7 +461,10 @@ with right_column:
     # --------------------------------------------------------
     # PREDICTION RESULT
     # --------------------------------------------------------
-    result = st.session_state.prediction_result
+    result = (
+        st.session_state.prediction_result
+    )
+
 
     if result is not None:
 
@@ -381,30 +479,37 @@ with right_column:
         )
 
 
+        # Main disease result
         st.write(
-            f"### {result['disease']}"
+            f"## {result['disease']}"
         )
 
 
-        result_col1, result_col2 = st.columns(2)
+        # Crop and confidence
+        result_col1, result_col2 = st.columns(
+            2
+        )
 
 
         with result_col1:
 
             st.metric(
-                "Crop",
-                result["crop"]
+                label="Crop",
+                value=result["crop"]
             )
 
 
         with result_col2:
 
             st.metric(
-                "Confidence",
-                f"{result['confidence'] * 100:.2f}%"
+                label="Confidence",
+                value=(
+                    f"{result['confidence'] * 100:.2f}%"
+                )
             )
 
 
+        # Detailed information
         with st.expander(
             "Prediction Details"
         ):
@@ -428,6 +533,5 @@ with right_column:
     elif uploaded_file is not None:
 
         st.info(
-            "Click **Predict Disease** to analyze "
-            "the uploaded image."
+            "Click **Predict Disease** to analyze the uploaded image."
         )
