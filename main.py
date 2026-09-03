@@ -15,7 +15,7 @@ st.set_page_config(
 BASE_DIR = Path(__file__).resolve().parent
 
 MODEL_CANDIDATES = [
-    BASE_DIR / "models" / "rice" / "rice_model.keras",
+    BASE_DIR / "models" / "rice_model.keras",
     BASE_DIR / "rice_model.keras",
 ]
 
