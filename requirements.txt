@@ -12,3 +12,4 @@ pydantic==2.12.5
 h5py==3.16.0
 python-dotenv
 TensorFlow==2.20.0
+keras==3.13.2
